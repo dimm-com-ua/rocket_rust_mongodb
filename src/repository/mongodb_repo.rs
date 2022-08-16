@@ -9,10 +9,13 @@ use mongodb::{
 };
 use mongodb::results::{DeleteResult, UpdateResult};
 use rocket::futures::StreamExt;
+use crate::models::account_model::Account;
 use crate::models::user_model::User;
+use crate::repository::accounts_repo::AccountRepo;
 
 pub struct MongoRepo {
     col: Collection<User>,
+    accounts_repo: AccountRepo,
 }
 
 impl MongoRepo {
@@ -23,9 +26,17 @@ impl MongoRepo {
             Err(_) => format!("Error loading env variable."),
         };
         let client = Client::with_uri_str(uri).unwrap();
-        let db = client.database("rustDB");
+        let db = &client.database("rustDB");
         let col : Collection<User> = db.collection("User");
-        MongoRepo { col }
+        let acc_col: Collection<Account> = db.collection("Account");
+        MongoRepo {
+            col,
+            accounts_repo: AccountRepo::create(acc_col)
+        }
+    }
+
+    pub fn accounts(&self) -> &AccountRepo {
+        &self.accounts_repo
     }
 
     pub fn create_user(&self, new_user: User) -> Result<InsertOneResult, Error> {
